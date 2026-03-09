@@ -8,28 +8,44 @@ app.use(express.json());
 
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
+const PORT = process.env.PORT || 3000;
 
 app.post("/token", async (req, res) => {
-  const { roomName, identity, canPublish } = req.body;
+  try {
+    const { roomName, identity, canPublish } = req.body;
 
-  const token = new AccessToken(
-    LIVEKIT_API_KEY,
-    LIVEKIT_API_SECRET,
-    { identity }
-  );
+    if (!roomName || !identity) {
+      return res.status(400).json({
+        error: "roomName and identity are required"
+      });
+    }
 
-  token.addGrant({
-    roomJoin: true,
-    room: roomName,
-    canPublish: canPublish,
-    canSubscribe: true
-  });
+    const token = new AccessToken(
+      LIVEKIT_API_KEY,
+      LIVEKIT_API_SECRET,
+      { identity }
+    );
 
-  const jwt = await token.toJwt();
+    token.addGrant({
+      roomJoin: true,
+      room: roomName,
+      canPublish: !!canPublish,
+      canSubscribe: true
+    });
 
-  res.json({ token: jwt });
+    const jwt = await token.toJwt();
+
+    res.json({ token: jwt });
+  } catch (error) {
+    console.error("Token creation error:", error);
+    res.status(500).json({ error: "Failed to create token" });
+  }
 });
 
-app.listen(3000, () => {
-  console.log("Pikq voice server running");
+app.get("/", (req, res) => {
+  res.send("Pikq voice server is running.");
+});
+
+app.listen(PORT, () => {
+  console.log(`Pikq voice server running on port ${PORT}`);
 });
